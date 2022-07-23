@@ -1,4 +1,5 @@
 ﻿module Parser
+
 open FParsec
 
 type Expression =
@@ -6,6 +7,7 @@ type Expression =
   | IntegerLiteral of int
   | Add of Expression * Expression
   | If of Expression * Expression * Expression
+  | IdentifierReference of string
 
 let expression, expressionRef = createParserForwardedToRef<Expression, unit> ()
 
@@ -15,7 +17,15 @@ let pFalse = stringReturn "false" (BoolLiteral false)
 
 let boolLiteral = (pTrue <|> pFalse) .>> spaces
 let integerLiteral = pint32 .>> spaces |>> IntegerLiteral
-let expr1 = integerLiteral <|> boolLiteral
+
+let identifierReference =
+  identifier (IdentifierOptions()) .>> spaces
+  |>> IdentifierReference
+
+let expr1 =
+  integerLiteral
+  <|> boolLiteral
+  <|> identifierReference
 
 let plus = pstring "+" .>> spaces
 
@@ -27,4 +37,3 @@ type Value =
   | Integer of int
   | Float of float
   | String of string
-
