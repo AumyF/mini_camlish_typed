@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "fsautocomplete": {
+      "version": "0.55.0",
+      "commands": [
+        "fsautocomplete"
+      ]
+    },
+    "fantomas-tool": {
+      "version": "4.7.9",
+      "commands": [
+        "fantomas"
+      ]
+    },
+    "dotnet-fsharplint": {
+      "version": "0.21.2",
+      "commands": [
+        "dotnet-fsharplint"
+      ]
+    }
+  }
+}
