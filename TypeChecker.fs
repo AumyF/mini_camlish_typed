@@ -1,9 +1,11 @@
 open System
 open Parser
+open FsToolkit.ErrorHandling
 
 type Ty =
   | TInt
   | TBool
+  | TFn of Ty * Ty
 
 type TyEnv = Map<string, Ty>
 let lookup tenv identifier = Map.tryFind identifier tenv
@@ -27,7 +29,6 @@ let rec typecheck1 tenv expr =
     | (Ok (TInt), Ok (TInt)) -> Ok(TInt)
     | _ -> Error("type error in add")
   | If (econd, etrue, efalse) ->
-
     let tc = typecheck1 tenv
 
     match (tc econd, tc etrue, tc efalse) with
@@ -37,6 +38,28 @@ let rec typecheck1 tenv expr =
     | (Ok (t), _, _) -> Error(sprintf "expected bool, got %A" t)
     | (t1, t2, t3) -> Error(sprintf "type error: %A %A %A " t1 t2 t3)
 
+  | Function (param, body) ->
+    result {
+      let! t1 =
+        lookup tenv param
+        |> Result.requireSome (sprintf "type env error")
+
+      let! t2 = typecheck1 tenv body
+      return TFn(t1, t2)
+    }
+  | Apply (fn, arg) ->
+    let checkFn tfn targ =
+      match tfn with
+      | TFn (tparam, tbody) when tparam = targ -> Ok(tbody)
+      | TFn (tparam, _) -> Error(sprintf "type of param and arg mismatches; param: %A arg: %A" tparam targ)
+      | tfn -> Error(sprintf "expected function but got %A" tfn)
+
+    result {
+      let! tfn = typecheck1 tenv fn
+      let! targ = typecheck1 tenv arg
+      let! t = checkFn tfn targ
+      return t
+    }
 
 let test tenv expr =
   printfn "Typechecking %A:" expr
@@ -54,7 +77,8 @@ let main argv =
   let tenv = Map [ ("x", TInt); ("p", TBool) ]
 
   [ If(IdentifierReference("p"), IntegerLiteral(1), IdentifierReference("x"))
-    If(IdentifierReference("x"), IntegerLiteral(3), IntegerLiteral(12)) ]
+    If(IdentifierReference("x"), IntegerLiteral(3), IntegerLiteral(12))
+    Function("x", If(BoolLiteral(true), IdentifierReference("x"), IntegerLiteral(100))) ]
   |> List.iter (test tenv)
 
   0
