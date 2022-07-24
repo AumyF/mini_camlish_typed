@@ -8,8 +8,6 @@ type Expression =
   | Add of Expression * Expression
   | If of Expression * Expression * Expression
   | IdentifierReference of string
-  | Function of string * Expression
-  | Apply of Expression * Expression
 
 let expression, expressionRef = createParserForwardedToRef<Expression, unit> ()
 
