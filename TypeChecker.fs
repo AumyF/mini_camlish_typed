@@ -2,12 +2,16 @@ open System
 open Parser
 open FsToolkit.ErrorHandling
 
+type Tyvar = string
+
 type Ty =
   | TInt
   | TBool
-  | TVar of string
+  | TFn of Ty * Ty
+  | TVar of Tyvar
 
 type TyEnv = Map<string, Ty>
+type TySubst = list<Tyvar * Ty>
 let lookup tenv identifier = Map.tryFind identifier tenv
 
 let ok_or e =
@@ -19,9 +23,10 @@ let typeVar s = TVar("'" + s)
 
 let substitute tvar t tenv =
   option {
-    let! key = Map.tryFindKey(fun _ value -> value = tvar) tenv
+    let! key = Map.tryFindKey (fun _ value -> value = tvar) tenv
     return Map.add key t tenv
-  } |> Option.defaultValue tenv
+  }
+  |> Option.defaultValue tenv
 
 let rec typecheck1 tenv expr =
   match expr with
@@ -79,10 +84,86 @@ let rec typecheck1 tenv expr =
       return (tenv, tresult)
     }
 
+let rec occurs tx t =
+  if tx = t then
+    true
+  else
+    match t with
+    | TFn (t1, t2) -> (occurs tx t1) || (occurs tx t2)
+    | _ -> false
+
+let rec subst_ty theta t =
+  let rec subst_ty1 theta s =
+    match theta with
+    | [] -> TVar(s)
+    | (tx, t1) :: theta -> if tx = s then t1 else subst_ty1 theta s
+
+  match t with
+  | TInt -> TInt
+  | TBool -> TBool
+  | TFn (tp, tb) -> TFn(subst_ty theta tp, subst_ty theta tb)
+  | TVar (s) -> subst_ty1 theta s
+
+let subst_tyenv theta tenv =
+  List.map (fun (x, t) -> (x, subst_ty theta t)) tenv
+
+let subst_eql theta eql =
+  List.map (fun (t1, t2) -> (subst_ty theta t1, subst_ty theta t2)) eql
+
+let rec lookup_list x ls =
+  match ls with
+  | [] -> None
+  | (y, z) :: tl ->
+    if x = y then
+      Some(z)
+    else
+      lookup_list x tl
+
+let rec compose_subst theta2 theta1 =
+  let theta = List.map (fun (tx, t) -> (tx, subst_ty theta2 t)) theta1
+
+  List.fold
+    (fun tau ->
+      fun (tx, t) ->
+        match lookup_list tx theta1 with
+        | Some (_) -> tau
+        | None -> (tx, t) :: tau)
+    theta
+    theta2
+
+let unify eql =
+  let rec solve eql theta =
+    match eql with
+    | [] -> Ok(theta)
+    | (t1, t2) :: eql ->
+      if t1 = t2 then
+        solve eql theta
+      else
+        match (t1, t2) with
+        | (TFn (t1p, t1b), TFn (t2p, t2b)) -> solve ((t1p, t2p) :: (t1b, t2b) :: eql) theta
+        | (TVar (s), _) ->
+          if (occurs t1 t2) then
+            Error("unification failed: t1 occurs in t2")
+          else
+            solve (subst_eql [ (s, t2) ] eql) (compose_subst [ (s, t2) ] theta)
+        | (_, TVar (s)) ->
+          if (occurs t2 t1) then
+            Error("unification failed: t2 occurs in t1")
+          else
+            solve (subst_eql [ (s, t1) ] eql) (compose_subst [ (s, t2) ] theta)
+        | (_, _) -> Error("unification failed")
+
+  solve eql []
+
 
 let test tenv expr =
   printfn "Typechecking %A:" expr
   let result = typecheck1 tenv expr
+  printfn "  %A" result
+
+let test_unify eql =
+  printfn "Unifying %A:" eql
+  let result = unify eql
   printfn "  %A" result
 
 [<EntryPoint>]
@@ -98,5 +179,12 @@ let main argv =
   [ If(IdentifierReference("p"), IntegerLiteral(1), IdentifierReference("x"))
     If(IdentifierReference("x"), IntegerLiteral(3), IntegerLiteral(12)) ]
   |> List.iter (test tenv)
+
+  [ [ (TVar("'a"), TBool) ]
+    [ (TInt, TBool) ]
+    [ (TVar("'a"), TVar("'b")) ]
+    [ (TFn(TVar("'a"), TVar("'b")), TFn(TVar("'b"), TVar("'c"))) ]
+    [ (TVar("'a"), TFn(TVar("'b"), TVar("'a"))) ] ]
+  |> List.iter (test_unify)
 
   0
