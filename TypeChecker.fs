@@ -99,12 +99,14 @@ let unify eql =
 
   solve eql []
 
-let rec typecheck1 tenv expr =
+let newTypeVar =
   let mutable typeVarCount = 0
-  let newTypeVar () =
-    let name= "'a" + typeVarCount.ToString()
+  fun _ ->
+    let name = "'a" + typeVarCount.ToString()
     typeVarCount <- typeVarCount + 1
-    TVar(name)
+    TVar name
+
+let rec typecheck1 tenv expr =
   match expr with
   | IdentifierReference (name) ->
     match lookup tenv name with
@@ -119,6 +121,10 @@ let rec typecheck1 tenv expr =
     result {
       let! (tenv, tleft, theta1) = typecheck1 tenv eleft
       let! (tenv, tright, theta2) = typecheck1 tenv eright
+      printfn "tleft: %A" tleft
+      printfn "theta1: %A" theta1
+      printfn "tright: %A" tright
+      printfn "theta2: %A" theta2
       let tleft = subst_ty theta2 tleft
       let! theta3 = unify [ (tleft, TInt); (tright, TInt) ]
       let tenv = subst_tyenv theta3 tenv
