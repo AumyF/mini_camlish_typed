@@ -19,13 +19,6 @@ let ok_or e =
   | Some (v) -> Ok(v)
   | None -> Error(e)
 
-let mutable n = 0
-
-let newTypeVar () =
-  let name = "'a" + n.ToString()
-  n <- n + 1
-  TVar(name)
-
 let substitute tvar t tenv =
   option {
     let! key = Map.tryFindKey (fun _ value -> value = tvar) tenv
@@ -109,8 +102,8 @@ let unify eql =
 let rec typecheck1 tenv expr =
   let mutable typeVarCount = 0
   let newTypeVar () =
-    let name= "'a" + n.ToString()
-    n <- n + 1
+    let name= "'a" + typeVarCount.ToString()
+    typeVarCount <- typeVarCount + 1
     TVar(name)
   match expr with
   | IdentifierReference (name) ->
