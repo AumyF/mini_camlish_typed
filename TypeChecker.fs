@@ -10,7 +10,10 @@ type Ty =
   | TFn of Ty * Ty
   | TVar of Tyvar
 
+/// 変数と型の対応関係
 type TyEnv = Map<string, Ty>
+
+/// 型変数と型の対応関係
 type TySubst = list<Tyvar * Ty>
 let lookup tenv identifier = Map.tryFind identifier tenv
 
@@ -75,6 +78,8 @@ let rec compose_subst theta2 theta1 =
     theta
     theta2
 
+/// 単一化
+/// 型どうしの等式のリストを受け取り、型代入を返す
 let unify eql =
   let rec solve eql theta =
     match eql with
@@ -168,26 +173,27 @@ let rec showType ty =
   match ty with
   | TInt -> "int"
   | TBool -> "bool"
-  | TFn(p, b) ->
+  | TFn (p, b) ->
     let p = showType p
     let b = showType b
     sprintf "%s -> %s" p b
-  | TVar(name) -> name
+  | TVar (name) -> name
 
 let checktop e = typecheck1 (Map []) e
 
 let test tenv expr =
   printfn "Typechecking %A:" expr
   let result = typecheck1 tenv expr
+
   match result with
-  | Ok(tenv, texpr, theta) -> printfn "  %A" (showType texpr)
-  | Error(_) -> printfn "  %A" result
+  | Ok (tenv, texpr, theta) -> printfn "  %A" (showType texpr)
+  | Error (_) -> printfn "  %A" result
 
 let test_unify eql =
   printfn "Unifying %A:" eql
   let result = unify eql
   printfn "  %A" result
-    
+
 
 [<EntryPoint>]
 let main argv =
