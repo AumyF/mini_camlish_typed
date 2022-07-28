@@ -1,3 +1,5 @@
+module TypeChecker
+
 open System
 open Parser
 open FsToolkit.ErrorHandling
@@ -104,8 +106,10 @@ let unify eql =
 
   solve eql []
 
+
 let newTypeVar =
   let mutable typeVarCount = 0
+
   fun _ ->
     let name = "'a" + typeVarCount.ToString()
     typeVarCount <- typeVarCount + 1
@@ -193,31 +197,3 @@ let test_unify eql =
   printfn "Unifying %A:" eql
   let result = unify eql
   printfn "  %A" result
-
-
-[<EntryPoint>]
-let main argv =
-  [
-    // If(BoolLiteral true, IntegerLiteral 1, IntegerLiteral 100)
-    // If(IdentifierReference "x", Add(IdentifierReference "y", IntegerLiteral 10), IntegerLiteral 100) ;
-    Function("a", Function("b", Add(IdentifierReference "a", IdentifierReference "b")))
-    Function(
-      "f",
-      Function("x", Apply(IdentifierReference "f", Apply(IdentifierReference "f", IdentifierReference "x")))
-    )
-    Function(
-      "x",
-      Function(
-        "y",
-        Function(
-          "z",
-          Apply(
-            Apply(IdentifierReference "x", IdentifierReference "z"),
-            Apply(IdentifierReference "y", IdentifierReference "z")
-          )
-        )
-      )
-    ) ]
-  |> List.iter (test (Map []))
-
-  0
