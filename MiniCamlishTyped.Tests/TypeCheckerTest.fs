@@ -70,3 +70,16 @@ let Test2 () =
       |> shouldEqual (TFn(TFn(TVar "'a3", TVar "'a3"), TFn(TVar "'a3", TVar "'a3")))
   }
   |> ignore
+
+
+[<Test>]
+let Test3 () =
+  result {
+    let! (_, ty, _) =
+      typecheck1
+        (Map [])
+        (If(IdentifierReference "p", Add(IdentifierReference "x", IntegerLiteral(12)), IdentifierReference "y"))
+
+    return ty |> shouldEqual TInt
+  }
+  |> ignore

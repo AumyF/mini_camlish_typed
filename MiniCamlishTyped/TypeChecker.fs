@@ -131,15 +131,25 @@ let rec typecheck1 tenv expr =
     result {
       let! (tenv, tleft, theta1) = typecheck1 tenv eleft
       let! (tenv, tright, theta2) = typecheck1 tenv eright
-      printfn "tleft: %A" tleft
-      printfn "theta1: %A" theta1
-      printfn "tright: %A" tright
-      printfn "theta2: %A" theta2
       let tleft = subst_ty theta2 tleft
       let! theta3 = unify [ (tleft, TInt); (tright, TInt) ]
       let tenv = subst_tyenv theta3 tenv
       let theta = compose_subst theta3 (compose_subst theta2 theta1)
       return (tenv, TInt, theta)
+    }
+  | If (econd, etrue, efalse) ->
+    result {
+      let! (tenv, tcond, theta1) = typecheck1 tenv econd
+      let! (tenv, ttrue, theta2) = typecheck1 tenv etrue
+      let! (tenv, tfalse, theta3) = typecheck1 tenv efalse
+      let ttrue = subst_ty theta3 ttrue
+      let! theta4 = unify [ tcond, TBool; ttrue, tfalse ]
+      let tenv = subst_tyenv theta4 tenv
+
+      let theta =
+        compose_subst theta4 (compose_subst theta3 (compose_subst theta2 theta1))
+
+      return (tenv, ttrue, theta)
     }
   | Function (param, ebody) ->
     result {
@@ -162,7 +172,6 @@ let rec typecheck1 tenv expr =
       let theta4 = compose_subst theta3 (compose_subst theta2 theta1)
       return (tenv, tret, theta4)
     }
-  | _ -> Error("unknown expression")
 
 
 //| If (econd, etrue, efalse) ->
@@ -198,5 +207,3 @@ let test_unify eql =
   printfn "Unifying %A:" eql
   let result = unify eql
   printfn "  %A" result
-
-
