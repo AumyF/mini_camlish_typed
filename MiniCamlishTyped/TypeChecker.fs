@@ -68,6 +68,7 @@ let rec lookup_list x ls =
     else
       lookup_list x tl
 
+/// 2つの型代入を合成して返す
 let rec compose_subst theta2 theta1 =
   let theta = List.map (fun (tx, t) -> (tx, subst_ty theta2 t)) theta1
 
@@ -197,3 +198,5 @@ let test_unify eql =
   printfn "Unifying %A:" eql
   let result = unify eql
   printfn "  %A" result
+
+

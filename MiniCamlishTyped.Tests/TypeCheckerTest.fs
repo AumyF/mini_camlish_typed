@@ -13,6 +13,23 @@ let setup () =
   |> ignore
 
 [<Test>]
+let compose_1 () =
+  compose_subst [ "'a", TInt ] [
+    "'b", TBool
+  ]
+  |> shouldEqual [ "'a", TInt; "'b", TBool ]
+
+[<Test>]
+let substTy1 () =
+  subst_ty [ "a", TInt ] (TVar "a")
+  |> shouldEqual TInt
+
+[<Test>]
+let substTy2 () =
+  subst_ty [ "a", TInt; "b", TBool ] (TFn(TVar "a", TVar "b"))
+  |> shouldEqual (TFn(TInt, TBool))
+
+[<Test>]
 let Test1 () =
   unify [ (TVar "a", TBool) ]
   |> shouldEqual (Ok[("a", TBool)])
